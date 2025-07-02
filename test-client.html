@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Restaurant Bot Test</title>
+</head>
+<body>
+  <h2>Test Restaurant Search</h2>
+
+  <input id="cuisine" placeholder="Cuisine (e.g., Indian)">
+  <input id="location" placeholder="Location (e.g., Delhi)">
+  <button onclick="searchRestaurants()">Search</button>
+
+  <pre id="output"></pre>
+
+  <!-- Socket.IO CDN -->
+  <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+  <script>
+    // 1️⃣ Connect to backend
+    const socket = io('http://localhost:5000');
+
+    // 2️⃣ Listen for results
+    socket.on('search_results', (data) => {
+      document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+    });
+
+    // 3️⃣ Send search request
+    function searchRestaurants() {
+      const cuisine = document.getElementById('cuisine').value;
+      const location = document.getElementById('location').value;
+
+      socket.emit('search_restaurants', { cuisine, location });
+    }
+  </script>
+</body>
+</html>
