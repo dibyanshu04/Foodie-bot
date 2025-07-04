@@ -1,4 +1,4 @@
-const Restaurant = require('../models/restaurant');
+const Restaurant = require('../src/models/restaurant');
 
 
 module.exports = (io,socket) => {

@@ -23,12 +23,8 @@ const orderSchema = new mongoose.Schema({
         type: String ,
         default: "pending"
     },
-    createdAt:{
-        type: Date ,
-        required:Date.now
-    }
-
-});
+},
+{timestamps: true});
 
 const Order = mongoose.model('Order', orderSchema);
 module.exports = Order;

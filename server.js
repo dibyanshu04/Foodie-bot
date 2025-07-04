@@ -5,6 +5,7 @@ const connectDB = require("./utils/db");
 const Socket = require("socket.io");
 const initSocket = require("./socket");
 
+
 const server = http.createServer(app);
 
 const io = Socket(server, {
@@ -21,6 +22,8 @@ io.on("connection", (socket) => {
 
   initSocket(io, socket);
 });
+
+
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
