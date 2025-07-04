@@ -2,12 +2,12 @@ require("dotenv").config();
 const http = require("http");
 const app = require("./app");
 const connectDB = require("./utils/db");
-const { Server } = require("socket.io");
+const Socket = require("socket.io");
 const initSocket = require("./socket");
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
+const io = Socket(server, {
   cors: {
     origin: "*",
     methods: ["GET", "POST"],
