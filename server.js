@@ -5,6 +5,7 @@ const connectDB = require("./utils/db");
 const Socket = require("socket.io");
 const initSocket = require("./socket");
 
+
 const server = http.createServer(app);
 
 const io = Socket(server, {
