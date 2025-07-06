@@ -84,13 +84,33 @@ try {
         {date,time,guests,specialRequest},
         {new : true}
     );
+    if(!updatedReservation){
+        return res.status(404).json({message:"No updated reservations found!"})
+    }
+    return res.status(200).json({message:"Resevation updated successfully!", updatedReservation});
 
     
 } catch (error) {
     
+    return res.status(500).json({message:"Failed to update reservation!",error});
 }
 };
-const deleteReservation = async(req,res)=>{};
+const deleteReservation = async(req,res)=>{
+    try{
+    const id = req.params.reservationId;
+    const cancelReservation = await Reservation.findOneAndDelete;
+    const cancelReservationById = await Reservation.findByIdAndDelete(id);
+    if(!cancelReservation || !cancelReservationById){
+        return res
+        .status(404)
+        .json({ message: "No Reservation found to be canceled!" });
+    }
+    return res.status(200).json({message:'Reservation canceled successfully!'})
+}catch(error){
+    return res.status(500).json({message:"Failed to cancel Reservation",error})
+}
+};
+
 
 module.exports = {
     addReservation,
