@@ -78,7 +78,7 @@ const updateReservation=async(req,res)=>{
 try {
     const id = req.params.reservationId;
     const updatedReservation = await Reservation.findByIdAndUpdate(id);
-    const 
+    
 } catch (error) {
     
 }
