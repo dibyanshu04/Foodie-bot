@@ -1,5 +1,6 @@
 const {default: mongoose} = require('mongoose');
 const Reservation = require('../models/reservation');
+const Restaurant = require('../models/restaurant');
 
 //create reservation, view All Reservation, view reservation by Id
 const addReservation = async(req,res) =>{
@@ -77,7 +78,13 @@ const viewReservationById = async(req,res) =>{
 const updateReservation=async(req,res)=>{
 try {
     const id = req.params.reservationId;
-    const updatedReservation = await Reservation.findByIdAndUpdate(id);
+    const {date,time,guests,specialRequest} = req.body;
+    const updatedReservation = await Reservation.findOneAndUpdate(
+        {_id:id},
+        {date,time,guests,specialRequest},
+        {new : true}
+    );
+
     
 } catch (error) {
     

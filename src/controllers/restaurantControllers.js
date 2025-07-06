@@ -126,7 +126,9 @@ const addProductToMenu = async(req,res)=>{
     } catch (error) {
         
     }
+
 };
+
 
 module.exports= {
         addRestaurant,

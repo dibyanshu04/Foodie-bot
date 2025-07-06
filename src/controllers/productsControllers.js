@@ -40,7 +40,14 @@ const addProduct = async (req, res) => {
 
 const updateProduct = async (req, res) => {
   try {
-    const updatedProduct = await Product.findOneAndUpdate();
+    const id = req.params.productId;
+    const { productName, productCategory, price } = req.body;
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: id },
+      { productName, productCategory, price },
+      {new: true}
+
+    );
     if (!updatedProduct) {
       return res.status(404).json({ message: "Product not found" });
     }
