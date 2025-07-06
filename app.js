@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
 const productRoutes = require('./src/routes/productRoutes')
+const restaurantRoutes = require('./src/routes/restaurantRoutes')
+const reservationRoutes = require('./src/routes/reservationRoutes')
 const app = express();
 
 app.use(cors());
@@ -11,6 +13,7 @@ app.get('/', (req, res) => {
 }); 
 
 app.use('/product', productRoutes)  //it is a middleware
-// app.use('/restaurants', restaurantRoutes)
+app.use('/restaurant', restaurantRoutes)
+app.use('/reservation', reservationRoutes)
 
 module.exports = app;
