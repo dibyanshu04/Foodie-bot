@@ -14,7 +14,7 @@ const addReservation = async(req,res) =>{
         const status = req.body.status;
 
         if(!customerName || !restaurantName || !date || !time || !guests){
-            res.status(404).json({message: "Customer Name, Restaurant Name, date, time, guests cannot be undefined"})
+            res.status(404).json({message: "customerName, restaurantName, date, time, guests cannot be undefined"})
         }
 
         const newReservation = new Reservation({
