@@ -101,23 +101,23 @@ const updateRestaurant=async(req,res)=>{
 };
 
 
-const deleteRestaurant = async(req,res)=>{
+const deleteRestaurant = async(req,res) => {
     try {
         const id = req.params.restaurantId;
-        const restaurantToDelete = Restaurant.findByIdAndDelete(id);
-        const toDeleteRestaurant = Restaurant.findOneAndDelete({_id:id});
+       // const restaurantToDelete = Restaurant.findByIdAndDelete(id);
+        const toDeleteRestaurant = await Restaurant.findOneAndDelete({_id:id});
 
-         if (!toDeleteRestaurant) {
-      return res
-        .status(404)
-        .json({ message: "No Restaurant found to be deleted!" });
-    }
+      if (!toDeleteRestaurant) {
+        return res
+          .status(404)
+          .json({ message: "No Restaurant found to be deleted!" });
+        };
     return res
       .status(200)
-      .json({ message: "Restaurant deleted successfully!", toDeleteRestaurant, restaurantToDelete });
+      .json({ message: "Restaurant deleted successfully!", toDeleteRestaurant});
     } catch (error) {
         console.log(error);
-    return res.status(500).json({ message: "Failed to delete Restaurant", error });
+        return res.status(500).json({ message: "Failed to delete Restaurant", error });
     }
 };
 const addProductToMenu = async(req,res)=>{
@@ -126,7 +126,9 @@ const addProductToMenu = async(req,res)=>{
     } catch (error) {
         
     }
+
 };
+
 
 module.exports= {
         addRestaurant,
