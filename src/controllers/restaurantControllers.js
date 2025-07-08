@@ -1,7 +1,7 @@
 const {default: mongoose} = require('mongoose');
 const Restaurant = require('../models/restaurant');
 
-// create restuarants, view all restaurant , view by id, add products to menu.
+// create restaurants, view all restaurant , view by id, add products to menu.
 const addRestaurant = async(req,res) => {
     try {
         const restaurantName = req.body.restaurantName;
@@ -38,7 +38,7 @@ const addRestaurant = async(req,res) => {
 
 const viewRestaurant = async(req,res) =>{
     try {
-        const allRestaurants = await Restaurant.find({});
+        const allRestaurants = await Restaurant.find({}).populate("menu");
         if(!allRestaurants){
             res.status(404).json({message: "No Restaurants Found"})
         }else(console.log(allRestaurants));
@@ -55,12 +55,11 @@ const viewRestaurant = async(req,res) =>{
 
 
 
-
 const viewRestaurantById = async(req,res) =>{
     try {
         const id = req.params.restaurantId;
         console.log(id);
-        const restaurant = Restaurant.findById(id);
+        const restaurant = await Restaurant.findById(id);
         if (!restaurant) {
       return res.status(404).json({ message: "Restaurant not found associated with the Id" });
     }
@@ -84,11 +83,15 @@ const viewRestaurantById = async(req,res) =>{
 
 const updateRestaurant=async(req,res)=>{
      try {
-    const id = req.params.restaurantId
+       const id = req.params.restaurantId
+       if (!id) {
+        return res.status(404)
+       }
     const { cuisine, priceRange, menu } = req.body
     const updatedRestaurant = await Restaurant.findOneAndUpdate(
       { _id: id },
-      { cuisine, priceRange, menu }
+      { cuisine, priceRange, menu }, 
+      {new:true}
     );
     if (!updatedRestaurant) {
       return res.status(404).json({ message: "Restaurant not found" });
@@ -120,19 +123,11 @@ const deleteRestaurant = async(req,res) => {
         return res.status(500).json({ message: "Failed to delete Restaurant", error });
     }
 };
-const addProductToMenu = async(req,res)=>{
-    try {
-        
-    } catch (error) {
-        
-    }
 
-};
 
 
 module.exports= {
         addRestaurant,
-        addProductToMenu,
         viewRestaurant,
         viewRestaurantById,
         updateRestaurant,

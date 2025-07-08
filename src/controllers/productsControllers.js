@@ -1,10 +1,13 @@
 const { default: mongoose } = require("mongoose");
 const Product = require("../models/products");
-const addProduct = async (req, res) => {
+const Restaurant = require("../models/restaurant");
+
+const addProductToRestaurant = async (req, res) => {
   try {
     if (!req.body) {
       return res.status(404).json({ message: "Body is not defined." });
     }
+    const restaurantId = req.params.restaurantId
     const productName = req.body.productName;
     const productCategory = req.body.productCategory;
     const price = req.body.price;
@@ -22,13 +25,21 @@ const addProduct = async (req, res) => {
       price,
       foodType,
     });
-
-    await newProduct.save();
-
-    if (!newProduct) {
+    
+    const product  = await newProduct.save();
+    
+    if (!product) {
       return res.send("Product Not Added!");
     }
-
+    
+    const restaurant = await Restaurant.findById(restaurantId);
+    if (!restaurant) {
+      return res.status(404)
+    }
+    
+    restaurant.menu.push(product)
+    await restaurant.save()
+    
     return res
       .status(201)
       .json({ message: "Product successfully Added!", newProduct });
@@ -134,7 +145,7 @@ const searchProduct = async (req, res) => {
 };
 
 module.exports = {
-  addProduct,
+  addProductToRestaurant,
   updateProduct,
   viewProducts,
   viewProductById,

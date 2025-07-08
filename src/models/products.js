@@ -18,10 +18,25 @@ const productSchema = new mongoose.Schema({
       type: String,
       enum: ['veg', 'non-veg']
     },
-    restaurantId: {   // later to be discuss
-        type: mongoose.Schema.Types.ObjectId,
-        required: false
-   }
+    description: {
+        type:String
+    },
+    imageUrl: String,
+    userRating: [{
+        rating: {
+            type: Number,
+            min: 1,
+            max:5
+        },
+        review: {
+            type: String,
+        },
+        user: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            ref: 'User'
+        }
+    }]
 });
 
 const Product = mongoose.model('Product', productSchema);

@@ -2,7 +2,7 @@ const express = require('express')
 const router = express.Router();
 const {
   viewProducts,
-  addProduct,
+  addProductToRestaurant,
   updateProduct,
   viewProductById,
   deleteProduct,
@@ -12,7 +12,7 @@ const {
 router.get("/view", viewProducts); 
 router.get("search-product", searchProduct)
 router.get("/view/:productId", viewProductById);
-router.post('/add', addProduct);
+router.post("/add/:restaurantId", addProductToRestaurant);
 router.put("/update/:productId", updateProduct);
 router.delete('/delete/:productId', deleteProduct);
 

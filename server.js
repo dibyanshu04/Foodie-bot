@@ -3,7 +3,7 @@ const http = require("http");
 const app = require("./app");
 const connectDB = require("./utils/db");
 const Socket = require("socket.io");
-const initSocket = require("./socket");
+const {initializeSocket} = require("./socket");
 
 
 const server = http.createServer(app);
@@ -17,11 +17,7 @@ const io = Socket(server, {
 
 connectDB();
 
-io.on("connection", (socket) => {
-  console.log("New client connected:", socket.id);
-
-  initSocket(io, socket);
-});
+initializeSocket(io);
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
