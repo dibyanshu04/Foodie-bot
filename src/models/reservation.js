@@ -27,9 +27,10 @@ const reservationSchema = new mongoose.Schema({
     },
     status:{
         type: String,
-        default:Date.now
+        
     }
-});
+},
+{timestamps:true});
 
 const Reservation = mongoose.model('Reservation',reservationSchema);
 module.exports = Reservation;

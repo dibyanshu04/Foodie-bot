@@ -60,7 +60,7 @@ const updateProduct = async (req, res) => {
 
 const viewProducts = async (req, res) => {
   try {
-    const allProducts = await Product.find({});
+    const allProducts = await Product.find({}); // return an array of documents, {} -> this is the options.
     if (allProducts) {
       console.log(allProducts);
     } else {
@@ -79,14 +79,18 @@ const viewProducts = async (req, res) => {
 
 const viewProductById = async (req, res) => {
   try {
-    const viewById = await Product.findById({});
-    if (!viewById) {
-      return res.status(404).json({ message: "Product not found" });
+    const id = req.params.productId;
+    console.log(id);
+    const product = await Product.findById(id); // this return a single document. It accepts the document Id as a parameter
+    if (!product) {
+      return res
+        .status(404)
+        .json({ message: "Product not found associated with the Id" });
     }
 
     return res.status(200).json({
       message: "Products viewed by id successfully!",
-      Products: viewById,
+      Product: product,
     });
   } catch (error) {
     console.log(error);
@@ -97,8 +101,11 @@ const viewProductById = async (req, res) => {
 };
 
 const deleteProduct = async (req, res) => {
-  const toDeleteProduct = await Product.findOneAndDelete;
   try {
+    const id = req.params.productId;
+    const productToDelete = await Product.findByIdAndDelete(id);
+    const toDeleteProduct = await Product.findOneAndDelete({ _id: id });
+
     if (!toDeleteProduct) {
       return res
         .status(404)
@@ -112,10 +119,25 @@ const deleteProduct = async (req, res) => {
     return res.status(500).json({ message: "Failed to delete product", error });
   }
 };
+
+const searchProduct = async (req, res) => {
+  const productName = req.body.productName;
+
+  const product = await Product.findOne({ productName });
+  if (!product) {
+    return res.status(404).json({ message: " No product with provided name!" });
+  }
+
+  return res
+    .status(200)
+    .json({ message: "Product found successfully!", product });
+};
+
 module.exports = {
   addProduct,
   updateProduct,
   viewProducts,
   viewProductById,
   deleteProduct,
+  searchProduct,
 };
