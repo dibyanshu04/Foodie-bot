@@ -1,5 +1,4 @@
 const Order = require("../models/order");
-const order = require('../models/order');
 
 const placeOrder = async (req, res) => {
   try {
@@ -8,16 +7,17 @@ const placeOrder = async (req, res) => {
     const deliveryAddress = req.body.deliveryAddress;
 
     if (!customerName || !item || !deliveryAddress) {
-      return res
-        .status(404)
-        .json({
-          message: " customerName, item, deliveryAddress cannot be undefined!",
-        });
+      return res.status(404).json({
+        message: " customerName, item, deliveryAddress cannot be undefined!",
+      });
     }
     const totalPrice = item.reduce(
-      (sum, item) => sum + (item.price * item.quantity),0);
+      (sum, item) => sum + item.price * item.quantity,
+      0
+    );
 
     const order = new Order({
+      user: req.user,
       customerName,
       item,
       totalPrice,
@@ -29,7 +29,7 @@ const placeOrder = async (req, res) => {
       .json({ message: "Order Placed", order: placedOrder });
   } catch (error) {
     console.error("Placing order error: ", error);
-    return res.status(500).json({ message: "Failed to place order" });
+    return res.status(500).json({ message: "Failed to place order", error });
   }
 };
 
@@ -59,6 +59,17 @@ const updateOrderStatus = async (req, res) => {
       { status: newStatus },
       { new: true }
     );
+    const validStatuses = [
+      "pending",
+      "confirmed",
+      "dispatched",
+      "delivered",
+      "cancelled",
+    ];
+    if (!validStatuses.includes(newStatus)) {
+      return res.status(400).json({ message: "Invalid status" });
+    }
+
     if (!updated) return res.status(404).json({ message: "Order not found" });
 
     return res.json({ message: "Status updated", order: updated });
@@ -77,16 +88,25 @@ const cancelOrder = async (req, res) => {
 
     return res
       .status(200)
-      .josn({ message: "Order Cancelled", orderId: deleted._id });
+      .json({ message: "Order Cancelled", orderId: deleted._id });
   } catch (error) {
     console.error("Cancel order error: ", error);
     return res.status(500).json({ message: "Failed to cancel order" });
   }
 };
 
+const getUserOrders = async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user });
+    res.json({ orders });
+  } catch (error) {
+    return res.status(500).json({ message: "Failed to fetch user Orders." });
+  }
+};
 module.exports = {
   placeOrder,
   trackOrder,
   updateOrderStatus,
   cancelOrder,
+  getUserOrders,
 };
