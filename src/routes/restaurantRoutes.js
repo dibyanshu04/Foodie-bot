@@ -11,10 +11,9 @@ const {
  
 } = require("../controllers/restaurantControllers");
 
-router.get("/view", viewRestaurant);
-router.get("/viewById/:restaurantId", viewRestaurantById);
-router.post("/add", addRestaurant);
-router.post("/add/:menuId", addProductToMenu);
+router.get("/", viewRestaurant);
+router.get("/:restaurantId", viewRestaurantById);
+router.post("/", addRestaurant);
 router.put("/update/:restaurantId", updateRestaurant);
 router.delete("/delete/:restaurantId", deleteRestaurant);
 

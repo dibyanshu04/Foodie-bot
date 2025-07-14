@@ -1,15 +1,29 @@
 const Order = require("../models/order");
 
 const placeOrder = async (req, res) => {
-  try {
-    const customerName = req.body.customerName;
-    const item = req.body.item;
-    const deliveryAddress = req.body.deliveryAddress;
 
-    if (!customerName || !item || !deliveryAddress) {
-      return res.status(404).json({
-        message: " customerName, item, deliveryAddress cannot be undefined!",
-      });
+  
+    try {
+        const customerName = req.body.customerName;
+        const item = req.body.item;
+        const deliveryAddress = req.body.deliveryAddress;
+
+        if(!customerName || !item || !deliveryAddress ){
+            return res.status(404).json({message: " customerName, item, deliveryAddress cannot be undefined!"})
+        };
+        const totalPrice = item.reduce((sum,item) => sum + (item.price * item.quantity),0);
+        const order = new Order({
+            customerName,
+            item,
+            totalPrice,
+            deliveryAddress
+        });
+        const placedOrder = await order.save();
+        return res.status(200).json({message:"Order Placed", order: placedOrder});
+        } catch (error) {
+        console.error("Placing order error: ",error);
+        return res.status(500).json({message : "Failed to place order"});
+
     }
     const totalPrice = item.reduce(
       (sum, item) => sum + item.price * item.quantity,
