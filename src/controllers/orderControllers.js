@@ -13,6 +13,7 @@ const placeOrder = async (req, res) => {
         };
         const totalPrice = item.reduce((sum,item) => sum + (item.price * item.quantity),0);
         const order = new Order({
+            user: req.user,
             customerName,
             item,
             totalPrice,
@@ -25,26 +26,7 @@ const placeOrder = async (req, res) => {
         return res.status(500).json({message : "Failed to place order"});
 
     }
-    const totalPrice = item.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-
-    const order = new Order({
-      user: req.user,
-      customerName,
-      item,
-      totalPrice,
-      deliveryAddress,
-    });
-    const placedOrder = await order.save();
-    return res
-      .status(200)
-      .json({ message: "Order Placed", order: placedOrder });
-  } catch (error) {
-    console.error("Placing order error: ", error);
-    return res.status(500).json({ message: "Failed to place order", error });
-  }
+    
 };
 
 const trackOrder = async (req, res) => {
