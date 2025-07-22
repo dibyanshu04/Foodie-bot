@@ -13,16 +13,20 @@ const addReservation = async (req, res) => {
     const specialRequest = req.body.specialRequest;
     const status = req.body.status;
 
+    const userId = req.user;
+    if (!userId) { return res.status(401).json({ message: "Unauthorized" }); }
+
+
+
     if (!customerName || !restaurantName || !date || !time || !guests) {
-      res
-        .status(404)
-        .json({
-          message:
-            "customerName, restaurantName, date, time, guests cannot be undefined",
-        });
+      res.status(404).json({
+        message:
+          "customerName, restaurantName, date, time, guests cannot be undefined",
+      });
     }
 
     const newReservation = new Reservation({
+      user: userId,
       customerName,
       restaurantName,
       date,
@@ -65,7 +69,7 @@ const viewReservationById = async (req, res) => {
   try {
     const id = req.params.reservationId;
     console.log(id);
-    const reservation = Reservation.findById(id);
+    const reservation = await Reservation.findById(id);
     if (!reservation) {
       return res
         .status(404)
@@ -74,7 +78,7 @@ const viewReservationById = async (req, res) => {
 
     return res.status(200).json({
       message: "Reservation viewed by id successfully!",
-      Reservation: reservation,
+      reservation: reservation,
     });
   } catch (error) {
     console.log(error);
@@ -97,12 +101,10 @@ const updateReservation = async (req, res) => {
         .status(404)
         .json({ message: "No updated reservations found!" });
     }
-    return res
-      .status(200)
-      .json({
-        message: "Resevation updated successfully!",
-        updatedReservation,
-      });
+    return res.status(200).json({
+      message: "Resevation updated successfully!",
+      updatedReservation,
+    });
   } catch (error) {
     return res
       .status(500)
@@ -128,6 +130,18 @@ const deleteReservation = async (req, res) => {
       .json({ message: "Failed to cancel Reservation", error });
   }
 };
+const getMyReservations = async (req, res) => {
+  try {
+    // Assuming you attach req.user (ObjectId) in your auth middleware:
+    const reservations = await Reservation.find({ user: req.user }).lean();
+    return res.status(200).json({ reservations });
+  } catch (error) {
+    console.error("Error fetching user reservations:", error);
+    return res.status(500).json({
+      message: "Failed to fetch your reservations."
+    });
+  }
+};
 
 module.exports = {
   addReservation,
@@ -135,4 +149,5 @@ module.exports = {
   viewReservationById,
   updateReservation,
   deleteReservation,
+  getMyReservations
 };
