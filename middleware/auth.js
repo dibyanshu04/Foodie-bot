@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const SECRET_KEY = "qwertyuiopasdfghjklzxcvbnm";
+const SECRET_KEY = "Abc23423sdf";
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -11,7 +11,7 @@ const authenticate = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, SECRET_KEY);
-    req.user = decoded.userId;
+    req.user = decoded.user._id || decoded.userId;
     next();
   } catch (error) {
     return res.status(403).json({ message: "Invalid token" });

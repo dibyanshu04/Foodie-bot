@@ -62,7 +62,7 @@ const initializeSocket = (io) => {
 //       const { customerName, items, deliveryAddress } = orderData;
 
 //       const totalPrice = items.reduce(
-//         (acc, item) => acc + item.price * item.quantity,
+//         (acc, items) => acc + items.price * items.quantity,
 //         0
 //       );
 
