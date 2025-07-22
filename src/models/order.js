@@ -9,7 +9,7 @@ const orderSchema = new mongoose.Schema(
     },
     customerName: { type: String, required: true },
 
-    item: [
+    items: [
       {
         name: { type: String, required: true },
         quantity: { type: Number, required: true },

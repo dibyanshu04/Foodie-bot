@@ -5,17 +5,17 @@ const placeOrder = async (req, res) => {
   
     try {
         const customerName = req.body.customerName;
-        const item = req.body.item;
+        const items = req.body.items;
         const deliveryAddress = req.body.deliveryAddress;
 
-        if(!customerName || !item || !deliveryAddress ){
-            return res.status(404).json({message: " customerName, item, deliveryAddress cannot be undefined!"})
+        if(!customerName || !items || !deliveryAddress ){
+            return res.status(404).json({message: " customerName, items, deliveryAddress cannot be undefined!"})
         };
-        const totalPrice = item.reduce((sum,item) => sum + (item.price * item.quantity),0);
+        const totalPrice = items.reduce((sum,items) => sum + (items.price * items.quantity),0);
         const order = new Order({
             user: req.user,
             customerName,
-            item,
+            items,
             totalPrice,
             deliveryAddress
         });
