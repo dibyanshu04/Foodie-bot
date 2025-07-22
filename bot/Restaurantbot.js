@@ -1310,10 +1310,13 @@ class RestaurantBot extends ActivityHandler {
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+       const { paymentLink } = resp.data;
 
       // 4) Success → clear cart & inform user
       await step.context.sendActivity(
-        `✅ Order #${resp.data.order._id} placed!`
+        `✅ Order #${resp.data.order._id} placed! 
+        \n Your Payment Link: ${paymentLink}`
       );
       await this.cartProperty.set(step.context, []);
     } catch (err) {
