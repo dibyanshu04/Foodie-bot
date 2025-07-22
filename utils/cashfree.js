@@ -1,9 +1,12 @@
-exports.generatePaymentLink = async (
+const axios = require('axios')
+const CASHFREE_BASE_URL = process.env.CASHFREE_BASE_URL
+  exports.generatePaymentLink = async (
   customer_details,
   amount,
   transaction_id
 ) => {
-  try {
+    try {
+    console.log(amount)
     console.log("transaction_id " + transaction_id);
 
     const payload = {

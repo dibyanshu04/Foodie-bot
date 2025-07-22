@@ -19,8 +19,9 @@ const placeOrder = async (req, res) => {
             deliveryAddress
         });
       const placedOrder = await order.save();
- 
-
+      
+      
+      
       // 12. Generate payment link
       const paymentLink = await generatePaymentLink(
         {
@@ -29,7 +30,7 @@ const placeOrder = async (req, res) => {
           customer_email: 'arpitalocab@gmail.com',
         },
         totalPrice,
-        placeOrder._id
+        order._id
       );
         return res.status(200).json({message:"Order Placed", order: placedOrder, paymentLink});
         } catch (error) {
