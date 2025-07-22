@@ -1,8 +1,7 @@
+const { generatePaymentLink } = require("../../utils/cashfree");
 const Order = require("../models/order");
 
 const placeOrder = async (req, res) => {
-
-  
     try {
         const customerName = req.body.customerName;
         const items = req.body.items;
@@ -19,8 +18,20 @@ const placeOrder = async (req, res) => {
             totalPrice,
             deliveryAddress
         });
-        const placedOrder = await order.save();
-        return res.status(200).json({message:"Order Placed", order: placedOrder});
+      const placedOrder = await order.save();
+ 
+
+      // 12. Generate payment link
+      const paymentLink = await generatePaymentLink(
+        {
+          customer_name: req.body.customerName,
+          customer_phone: '+916203015505',
+          customer_email: 'arpitalocab@gmail.com',
+        },
+        totalPrice,
+        placeOrder._id
+      );
+        return res.status(200).json({message:"Order Placed", order: placedOrder, paymentLink});
         } catch (error) {
         console.error("Placing order error: ",error);
         return res.status(500).json({message : "Failed to place order"});

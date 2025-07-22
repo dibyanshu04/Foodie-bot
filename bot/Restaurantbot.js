@@ -636,11 +636,12 @@ class RestaurantBot extends ActivityHandler {
               .createProperty("userProfile")
               .get(step.context);
             try {
-              await axios.post(
+              const response = await axios.post(
                 "http://localhost:5000/order",
                 { customerName, items: cartItems, deliveryAddress: "N/A" },
                 { headers: { Authorization: `Bearer ${token}` } }
               );
+              const {paymentLink} = response.data
               await step.context.sendActivity("✅ Order placed!");
               await this.cartProperty.set(step.context, []);
             } catch (error) {
