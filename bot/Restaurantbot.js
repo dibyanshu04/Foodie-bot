@@ -1,5 +1,3 @@
-// bot/RestaurantBot.js
-//const { LanguageRecognizer } = require("./cluRecognizer");
 const {
   ActivityHandler,
   MemoryStorage,
@@ -32,6 +30,8 @@ const CART_DIALOG = "cartDialog";
 const MANAGE_RES_DIALOG = "manageResDialog";
 const FILTER_REST_DIALOG = "filterRestDialog";
 const DISCOVERY_DIALOG = "discoveryDialog";
+const MANAGE_ORDERS_DIALOG = "manageOrdersDialog";
+const MANAGE_SINGLE_ORDER_DIALOG = "manageSingleOrderDialog";
 
 // Prompt IDs
 const PROMPT_TEXT = "textPrompt";
@@ -296,15 +296,54 @@ class RestaurantBot extends ActivityHandler {
     // 10. Make Reservation (auth)
     this.dialogs.add(
       new WaterfallDialog(RESERVE_DIALOG, [
-        this.ensureAuthenticated.bind(this),
-        async (step) => step.prompt(PROMPT_TEXT, "Name for reservation?"),
+        // Step 1: Auth guard
         async (step) => {
+          const profile = await this.userProfile.get(step.context, {});
+          if (!profile.token) {
+            return step.beginDialog(AUTH_DIALOG);
+          }
+          return step.next();
+        },
+        async (step) =>
+          step.prompt(
+            PROMPT_TEXT,
+            "👤 What name should we put on the reservation?"
+          ),
+
+        async (step) => {
+          // Save customer name
           step.values.customerName = step.result;
-          return step.prompt(PROMPT_TEXT, "Restaurant name?");
+
+          // Fetch available restaurants
+          const resp = await axios.get("http://localhost:5000/restaurant");
+          const list = resp.data.Restaurant || [];
+
+          // Build ChoicePrompt options
+          const choices = list.map((r) => ({
+            value: r.restaurantName,
+            action: {
+              type: "imBack",
+              title: r.restaurantName,
+              value: r.restaurantName,
+            },
+          }));
+
+          // Store list for later
+          step.values.restaurants = list;
+
+          // Prompt user to pick one
+          return step.prompt(PROMPT_CHOICE, {
+            prompt: "🏙️ Please select a restaurant:",
+            choices: ChoiceFactory.toChoices(list.map((r) => r.restaurantName)),
+            style: ListStyle.suggestedAction,
+          });
         },
         async (step) => {
-          step.values.restaurantName = step.result;
-          return step.prompt(PROMPT_TEXT, "Date (YYYY-MM-DD)?");
+          // Extract the selected restaurantName string
+          const choice = step.result.value;
+          step.values.restaurantName = choice;
+          console.log("🏨 Chosen Restaurant:", choice);
+          return step.prompt(PROMPT_TEXT, "📅 What date? (YYYY-MM-DD)");
         },
         async (step) => {
           step.values.date = step.result;
@@ -312,7 +351,7 @@ class RestaurantBot extends ActivityHandler {
         },
         async (step) => {
           step.values.time = step.result;
-          return step.prompt(PROMPT_TEXT, "# of guests?");
+          return step.prompt(PROMPT_TEXT, "Number of guests?");
         },
         this._makeReservationAPI.bind(this),
       ])
@@ -608,7 +647,14 @@ class RestaurantBot extends ActivityHandler {
     // 13) Cart Dialog (requires login)
     this.dialogs.add(
       new WaterfallDialog(CART_DIALOG, [
-        this.ensureAuthenticated.bind(this),
+        // Step 1: Auth guard
+        async (step) => {
+          const profile = await this.userProfile.get(step.context, {});
+          if (!profile.token) {
+            return step.beginDialog(AUTH_DIALOG);
+          }
+          return step.next();
+        },
         async (step) => {
           const cart = await this.cartProperty.get(step.context, []);
           if (!cart.length) {
@@ -667,69 +713,174 @@ class RestaurantBot extends ActivityHandler {
       ])
     );
 
-    // 14) Manage Reservations Dialog
+    // 14. Manage Reservations Dialog
+    // IDs for new dialogs
+    const MANAGE_SINGLE_RES_DIALOG = "manageSingleResDialog";
+
+    // 1) Main “Manage Reservations” dialog
     this.dialogs.add(
       new WaterfallDialog(MANAGE_RES_DIALOG, [
-        this.ensureAuthenticated.bind(this),
+        // Step 1: Auth-guard
         async (step) => {
-          const { token } = await this.userState
-            .createProperty("userProfile")
-            .get(step.context);
-          try {
-            const resp = await axios.get(
-              "http://localhost:5000/reservation/my-reservations",
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
-            const list = resp.data.orders || resp.data.reservations || [];
-            if (!list.length) {
-              await step.context.sendActivity(
-                "You have no active reservations."
-              );
-              return step.endDialog();
-            }
-            step.values.resList = list;
-            const choices = list.map((r) => `${r._id} @ ${r.date} ${r.time}`);
-            return step.prompt(PROMPT_CHOICE, {
-              prompt: "Select a reservation to cancel:",
-              choices: ChoiceFactory.toChoices(choices),
-            });
-          } catch {
-            await step.context.sendActivity(
-              "❌ Could not fetch your reservations."
-            );
-            return step.endDialog();
-          }
+          const profile = await this.userProfile.get(step.context, {});
+          if (!profile.token) return step.beginDialog(AUTH_DIALOG);
+          return step.next();
         },
+
+        // Step 2: Fetch and select a reservation
         async (step) => {
-          const raw = step.result?.value ?? step.result;
-          const reservationId = raw.split(" ")[0];
-          const { token } = await this.userState
-            .createProperty("userProfile")
-            .get(step.context);
-          try {
-            await axios.delete(
-              `http://localhost:5000/reservation/${reservationId}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
+          const { token } = await this.userProfile.get(step.context, {});
+          const resp = await axios.get(
+            "http://localhost:5000/reservation/my-reservations",
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const list = resp.data.reservations || [];
+          if (!list.length) {
             await step.context.sendActivity(
-              "🗑️ Reservation cancelled successfully."
+              "🗓️ You have no active reservations."
             );
-          } catch (error) {
-            const code = error.response?.status;
-            if (code === 401 || code === 403) {
-              await step.context.sendActivity(
-                "⚠️ Please log in to manage reservations."
-              );
-              return step.replaceDialog(AUTH_DIALOG);
-            }
-            await step.context.sendActivity("❌ Failed to cancel reservation.");
+            return step.replaceDialog(MAIN_DIALOG);
+          }
+          // Build choices labeled “Name @ Date Time”
+          const choices = list.map(
+            (r) => `${r.restaurantName} @ ${r.date} ${r.time} (ID:${r._id})`
+          );
+          // Store full list for lookup later
+          step.values.resList = list;
+
+          return step.prompt(PROMPT_CHOICE, {
+            prompt: "🗂️ Select a reservation to manage:",
+            choices: ChoiceFactory.toChoices(choices),
+            style: ListStyle.suggestedAction,
+          });
+        },
+
+        // Step 3: Hand off the picked reservation to the single-res dialog
+        async (step) => {
+          // Extract the ID out of the choice string
+          const picked = step.result.value || step.result;
+          const id = picked.match(/\(ID:([0-9a-f]{24})\)$/)[1];
+          const selected = step.values.resList.find((r) => r._id === id);
+
+          // Begin the looped dialog, passing the selected reservation
+          return step.beginDialog(MANAGE_SINGLE_RES_DIALOG, {
+            reservation: selected,
+          });
+        },
+
+        // End after user taps “Back”
+        async (step) => {
+          // step.result === 'back'
+          return step.replaceDialog(MAIN_DIALOG);
+        },
+      ])
+    );
+
+    // 2) Single-reservation management loop
+    this.dialogs.add(
+      new WaterfallDialog(MANAGE_SINGLE_RES_DIALOG, [
+        // A) Prompt the user with View/Update/Cancel/Back
+        async (step) => {
+          step.values.selectedRes = step.options.reservation;
+          const r = step.values.selectedRes;
+          const label = `${r.restaurantName} @ ${r.date} ${r.time}`;
+
+          return step.prompt(PROMPT_CHOICE, {
+            prompt: `⚙️ Manage: "${label}"`,
+            choices: ChoiceFactory.toChoices([
+              "View",
+              "Update",
+              "Cancel",
+              "Back",
+            ]),
+            style: ListStyle.suggestedAction,
+          });
+        },
+
+        // B) Handle each action and then loop or exit
+        async (step) => {
+          const action = step.result.value;
+          const r = step.values.selectedRes;
+          const { token } = await this.userProfile.get(step.context, {});
+
+          if (action === "View") {
+            // Show details but **do not** end—re-loop
+            await step.context.sendActivity(
+              `📝 Details:\n` +
+                `• Restaurant: ${r.restaurantName}\n` +
+                `• Date: ${r.date}\n` +
+                `• Time: ${r.time}\n` +
+                `• Guests: ${r.guests}\n` +
+                `• Special: ${r.specialRequest || "None"}\n` +
+                `• Status: ${r.status}`
+            );
+            // loop back
+            return step.replaceDialog(MANAGE_SINGLE_RES_DIALOG, {
+              reservation: r,
+            });
           }
 
-          return step.endDialog();
+          if (action === "Cancel") {
+            try {
+              await axios.delete(`http://localhost:5000/reservation/${r._id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              await step.context.sendActivity("🗑️ Reservation canceled.");
+            } catch {
+              await step.context.sendActivity("❌ Failed to cancel.");
+            }
+            // End the dialog right here
+            return step.endDialog();
+          }
+
+          if (action === "Back") {
+            // Exit loop
+            return step.next("back");
+          }
+
+          // action === “Update” → ask for new date
+          return step.prompt(PROMPT_TEXT, "📅 New date? (YYYY-MM-DD)");
+        },
+
+        // C) Collect new date
+        async (step) => {
+          step.values.newDate = step.result.trim();
+          return step.prompt(PROMPT_TEXT, "⏰ New time? (HH:MM)");
+        },
+
+        // D) Collect new time
+        async (step) => {
+          step.values.newTime = step.result.trim();
+          return step.prompt(PROMPT_TEXT, "👥 New guests count?");
+        },
+
+        // E) Apply PATCH, show result, then re-loop
+        async (step) => {
+          step.values.newGuests = step.result.trim();
+          const r = step.values.selectedRes;
+          const { newDate, newTime, newGuests } = step.values;
+          const { token } = await this.userProfile.get(step.context, {});
+
+          try {
+            await axios.patch(
+              `http://localhost:5000/reservation/${r._id}`,
+              { date: newDate, time: newTime, guests: newGuests },
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            await step.context.sendActivity("✅ Reservation updated.");
+          } catch {
+            await step.context.sendActivity("❌ Update failed.");
+          }
+
+          // re-fetch updated reservation for the loop
+          const resp = await axios.get(
+            `http://localhost:5000/reservation/${r._id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const updated = resp.data.reservation;
+          return step.replaceDialog(MANAGE_SINGLE_RES_DIALOG, {
+            reservation: updated,
+          });
         },
       ])
     );
@@ -791,6 +942,158 @@ class RestaurantBot extends ActivityHandler {
       ])
     );
 
+    // 1. Manage Orders – show your orders
+    this.dialogs.add(
+      new WaterfallDialog(MANAGE_ORDERS_DIALOG, [
+        // Step 1: Auth guard
+        async (step) => {
+          const profile = await this.userProfile.get(step.context, {});
+          if (!profile.token) return step.beginDialog(AUTH_DIALOG);
+          return step.next();
+        },
+
+        // Step 2: Fetch user’s orders
+        async (step) => {
+          const { token } = await this.userProfile.get(step.context, {});
+          const resp = await axios.get(
+            "http://localhost:5000/order/my-orders",
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+          const list = resp.data.orders || [];
+          if (!list.length) {
+            await step.context.sendActivity("📭 You have no orders.");
+            return step.replaceDialog(MAIN_DIALOG);
+          }
+          step.values.orders = list;
+
+          const choices = list.map((o) => {
+            // build a comma-separated item summary: "Pizza x1, Coke x2"
+            const summary = o.items
+              .map((i) => `${i.name} x${i.quantity}`)
+              .join(", ");
+
+            return {
+              value: o._id,
+              action: {
+                type: "imBack",
+                title: `${summary} @ ${o.createdAt.slice(0, 10)}`,
+                value: o._id,
+              },
+            };
+          });
+
+          return step.prompt(PROMPT_CHOICE, {
+            prompt: "📦 Select an order to track:",
+            choices: ChoiceFactory.toChoices(choices),
+            style: ListStyle.suggestedAction,
+          });
+        },
+
+        // Step 3: Hand off to single-order dialog
+        async (step) => {
+          const orderId = step.result.value;
+          const selected = step.values.orders.find((o) => o._id === orderId);
+          return step.beginDialog(MANAGE_SINGLE_ORDER_DIALOG, {
+            order: selected,
+          });
+        },
+
+        // Step 4: Back to main menu
+        async (step) => {
+          return step.replaceDialog(MAIN_DIALOG);
+        },
+      ])
+    );
+
+    // 2) Single‐Order Loop – show bill + buttons
+    this.dialogs.add(
+      new WaterfallDialog(MANAGE_SINGLE_ORDER_DIALOG, [
+        // Step A: Fetch full order and show a bill
+        async (step) => {
+          const order = step.options.order;
+          const { token } = await this.userProfile.get(step.context, {});
+          try {
+            const resp = await axios.get(
+              `http://localhost:5000/order/${order._id}`,
+              { headers: { Authorization: `Bearer ${token}` } }
+            );
+            const o = resp.data.order;
+
+            // Build invoice lines
+            const lines = o.items
+              .map(
+                (i) =>
+                  `• ${i.name} (₹${i.price} × ${i.quantity}) = ₹${
+                    i.price * i.quantity
+                  }`
+              )
+              .join("\n");
+            const subtotal = o.items.reduce(
+              (sum, i) => sum + i.price * i.quantity,
+              0
+            );
+            const fee = o.deliveryFee || 0;
+            const total = subtotal + fee;
+
+            await step.context.sendActivity(
+              `🧾 Order #${o._id.slice(-6)} – ${o.createdAt.slice(0, 10)}\n\n` +
+                `${lines}\n\n` +
+                `Subtotal: ₹${subtotal}\n` +
+                `Delivery Fee: ₹${fee}\n` +
+                `Total: ₹${total}\n\n` +
+                `Status: ${o.status}`
+            );
+          } catch {
+            await step.context.sendActivity("❌ Could not load order details.");
+            return step.endDialog();
+          }
+
+          // Then offer persistent buttons
+          return step.prompt(PROMPT_CHOICE, {
+            prompt: "⚙️ What would you like to do next?",
+            choices: ChoiceFactory.toChoices([
+              "Refresh", // re-fetch and re-display
+              "Cancel Order", // call DELETE /order/:id
+              "Back", // exit to main menu
+            ]),
+            style: ListStyle.suggestedAction,
+          });
+        },
+
+        // Step B: Handle button tap
+        async (step) => {
+          const action = step.result.value || step.result;
+          const o = step.options.order;
+          const { token } = await this.userProfile.get(step.context, {});
+
+          if (action === "Back") {
+            // exit this loop
+            return step.endDialog();
+          }
+
+          if (action === "Refresh") {
+            // re-run this same waterfall with the same order
+            return step.replaceDialog(MANAGE_SINGLE_ORDER_DIALOG, { order: o });
+          }
+
+          if (action === "Cancel Order") {
+            try {
+              await axios.delete(`http://localhost:5000/order/${o._id}`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              await step.context.sendActivity("🗑️ Order cancelled.");
+            } catch {
+              await step.context.sendActivity("❌ Failed to cancel order.");
+            }
+            return step.endDialog();
+          }
+
+          // should never get here
+          return step.endDialog();
+        },
+      ])
+    );
+
     // Message handler (with Add-to-Cart interception + navigation shortcuts)
     this.onMessage(async (context, next) => {
       const text = context.activity.text?.trim() || "";
@@ -821,6 +1124,19 @@ class RestaurantBot extends ActivityHandler {
           await dc.beginDialog(DISCOVERY_DIALOG);
           await this.saveState(context);
           return;
+        case "make reservation": // ← new
+          await dc.beginDialog(RESERVE_DIALOG);
+          await this.saveState(context);
+          return;
+        case "manage reservations": // ← new
+          await dc.beginDialog(MANAGE_RES_DIALOG);
+          await this.saveState(context);
+          return;
+        case "track order":
+          await dc.beginDialog(MANAGE_ORDERS_DIALOG);
+          await this.saveState(context);
+          return;
+
         case "log in":
           await dc.beginDialog(LOGIN_DIALOG);
           await this.saveState(context);
@@ -939,16 +1255,24 @@ class RestaurantBot extends ActivityHandler {
     return true;
   }
 
-  // Auth guard
+  // Auth guard that delegates to AUTH_DIALOG
   async ensureAuthenticated(step) {
-    const prop = this.userState.createProperty("userProfile");
-    const profile = await prop.get(step.context, {});
-    if (profile.token) return step.next();
+    // 1) If already have a token, just continue
+    const profile = await this.userProfile.get(step.context, {});
+    if (profile.token) {
+      return step.next();
+    }
+
+    // 2) Otherwise launch AUTH_DIALOG (which shows Log In / Sign Up / Cancel buttons)
     const result = await step.beginDialog(AUTH_DIALOG);
+
+    // 3) If they tapped “Cancel”, go back to main menu
     if (result === "cancelled") {
-      await step.context.sendActivity("Returning to main menu.");
+      await step.context.sendActivity("🚪 Returning to main menu.");
       return step.replaceDialog(MAIN_DIALOG);
     }
+
+    // 4) After login/sign-up completes, resume the current waterfall
     return step.next();
   }
 
@@ -1024,6 +1348,7 @@ class RestaurantBot extends ActivityHandler {
       }
       await step.context.sendActivity("❌ Order not found.");
     }
+    return step.endDialog();
   }
 
   // Make reservation API
