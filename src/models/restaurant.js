@@ -5,10 +5,12 @@ const restaurantSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  cuisine: [{
-    type: String,
-    required: true,
-  }],
+  cuisine: [
+    {
+      type: String,
+      required: true,
+    },
+  ],
   location: {
     type: String,
     required: true,
@@ -19,8 +21,9 @@ const restaurantSchema = new mongoose.Schema({
   },
   menu: {
     type: [mongoose.Schema.Types.ObjectId], // yeh mai baad me bata hu
-    ref: 'Product'
-  }
+    ref: "Product",
+  },
+  imageUrl: String,
 });
 
 const Restaurant = mongoose.model("Restaurant", restaurantSchema);
